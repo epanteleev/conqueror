@@ -27,6 +27,7 @@ namespace conq {
                     break;
                 }
 
+                std::this_thread::yield();
                 new_value = head + 1;
             }
 
