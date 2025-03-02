@@ -42,11 +42,12 @@ namespace conq {
         }
 
         std::optional<T> pop() {
-            if (!m_tail->next.load(std::memory_order_acquire)) {
+            const auto tail = m_tail->next.load(std::memory_order_acquire);
+            if (tail == nullptr) {
                 return std::nullopt;
             }
 
-            const auto output = m_tail->next.load(std::memory_order_acquire)->data;
+            const auto output = tail->data;
             auto* _back = m_tail;
             m_tail = _back->next.load(std::memory_order_acquire);
 

@@ -33,7 +33,7 @@ namespace conq {
 
             auto& slot = m_buffer[ring_buffer_index<LEN>(new_value - 1)];
             slot.value = std::forward<U>(value);
-            slot.set.test_and_set(std::memory_order_acquire);
+            slot.set.test_and_set(std::memory_order_release);
             return true;
         }
 
@@ -50,7 +50,7 @@ namespace conq {
             }
 
             const auto value = slot.value;
-            slot.set.clear(std::memory_order_release);
+            slot.set.clear(std::memory_order_relaxed);
             slot.set.notify_one();
 
             m_tail.store(tail + 1, std::memory_order_release);
