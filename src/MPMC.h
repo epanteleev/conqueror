@@ -4,14 +4,15 @@
 #include <optional>
 #include <atomic>
 #include <array>
+#include <thread>
+
 #include "Definitions.h"
 
 namespace conq {
     template<QElement T, std::size_t LEN>
-    requires PowerOfTwo<LEN>
-    class MPSCQueue final {
+    class MPMCQueue final {
     public:
-        MPSCQueue() = default;
+        MPMCQueue() = default;
 
         template<typename U>
         requires std::convertible_to<U, T>
@@ -32,28 +33,38 @@ namespace conq {
             }
 
             auto& slot = m_buffer[ring_buffer_index<LEN>(new_value - 1)];
+            while (slot.tag.test(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+
             slot.value = std::forward<U>(value);
             slot.tag.test_and_set(std::memory_order_release);
             return true;
         }
 
         std::optional<T> try_pop() {
-            const auto tail = m_tail.load(std::memory_order_acquire);
-            const auto head = m_head.load(std::memory_order_acquire);
-            if (head == tail) {
-                return std::nullopt;
+            auto tail = m_tail.load(std::memory_order_acquire);
+            auto new_value = tail + 1;
+            for (;;) {
+                if (tail == m_head.load(std::memory_order_acquire)) {
+                    return std::nullopt;
+                }
+
+                if (m_tail.compare_exchange_strong(tail, new_value, std::memory_order_release)) {
+                    break;
+                }
+
+                std::this_thread::yield();
+                new_value = tail + 1;
             }
 
-            auto& slot = m_buffer[ring_buffer_index<LEN>(tail)];
-            if (!slot.tag.test(std::memory_order_acquire)) {
-                return std::nullopt;
+            auto& slot = m_buffer[ring_buffer_index<LEN>(new_value - 1)];
+            while (!slot.tag.test(std::memory_order_acquire)) {
+                std::this_thread::yield();
             }
 
-            const auto value = std::move(slot.value);
-            slot.tag.clear(std::memory_order_relaxed);
-            slot.tag.notify_one();
-
-            m_tail.store(tail + 1, std::memory_order_release);
+            auto value = std::move(slot.value);
+            slot.tag.clear(std::memory_order_release);
             return value;
         }
 
@@ -68,3 +79,4 @@ namespace conq {
         std::array<Slot, LEN> m_buffer;
     };
 }
+

@@ -1,15 +1,13 @@
-#pragma
+#pragma once
 
 #include <atomic>
 #include "Definitions.h"
 
 namespace conq {
-
     template<typename T>
-    struct Slot {
+     struct alignas (CACHE_LINE_SIZE) Slot {
         std::atomic<Slot *> next;
         T data;
-        std::byte pad0[conq::CACHE_LINE_SIZE]{};
     };
 
     template<QElement T, typename Allocator = std::allocator<Slot<T>>>
@@ -47,7 +45,7 @@ namespace conq {
                 return std::nullopt;
             }
 
-            const auto output = tail->data;
+            const auto output = std::move(tail->data);
             auto* _back = m_tail;
             m_tail = _back->next.load(std::memory_order_acquire);
 
@@ -56,10 +54,8 @@ namespace conq {
         }
 
     private:
-        std::byte pad0[conq::CACHE_LINE_SIZE]{};
-        Slot<T> *m_head{};
-        std::byte pad1[conq::CACHE_LINE_SIZE]{};
-        Slot<T> *m_tail{};
+        alignas (CACHE_LINE_SIZE) Slot<T> *m_head{};
+        alignas (CACHE_LINE_SIZE) Slot<T> *m_tail{};
         Allocator m_allocator{};
     };
 }

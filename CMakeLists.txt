@@ -16,6 +16,7 @@ set(CONQ_LIB_SRC
     src/SPSC.h
     src/MPSC.h
     src/Definitions.h
+        src/MPMC.h
 )
 
 add_library(libconq_libconq STATIC ${CONQ_LIB_SRC})

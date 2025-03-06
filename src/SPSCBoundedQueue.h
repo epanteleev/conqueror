@@ -35,17 +35,14 @@ namespace conq {
                 return std::nullopt;
             }
 
-            const auto value = m_buffer[ring_buffer_index<LEN>(tail)];
+            const auto value = std::move(m_buffer[ring_buffer_index<LEN>(tail)]);
             m_tail.store(tail + 1, std::memory_order_release);
             return value;
         }
 
     private:
-        std::byte pad0[conq::CACHE_LINE_SIZE]{};
-        std::atomic<std::size_t> m_head = 0;
-        std::byte pad1[conq::CACHE_LINE_SIZE]{};
-        std::atomic<std::size_t> m_tail = 0;
-        std::byte pad2[conq::CACHE_LINE_SIZE]{};
-        alignas(conq::CACHE_LINE_SIZE) std::array<T, LEN> m_buffer;
+        alignas (CACHE_LINE_SIZE) std::atomic<std::size_t> m_head = 0;
+        alignas (CACHE_LINE_SIZE) std::atomic<std::size_t> m_tail = 0;
+        std::array<T, LEN> m_buffer;
     };
 }
