@@ -10,9 +10,10 @@
 
 namespace conq {
     template<QElement T, std::size_t LEN>
-    class MPMCQueue final {
+    requires PowerOfTwo<LEN>
+    class MPMCBoundedQueue final {
     public:
-        MPMCQueue() = default;
+        MPMCBoundedQueue() = default;
 
         template<typename U>
         requires std::convertible_to<U, T>

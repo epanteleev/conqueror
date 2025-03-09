@@ -9,9 +9,9 @@
 namespace conq {
     template<QElement T, std::size_t LEN>
     requires PowerOfTwo<LEN>
-    class MPSCQueue final {
+    class MPSCBoundedQueue final {
     public:
-        MPSCQueue() = default;
+        MPSCBoundedQueue() = default;
 
         template<typename U>
         requires std::convertible_to<U, T>

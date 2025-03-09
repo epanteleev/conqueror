@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "MPSC.h"
+#include "MPSCBoundedQueue.h"
 
 TEST(MPSC, test1) {
-    conq::MPSCQueue<int, 4> queue;
+    conq::MPSCBoundedQueue<int, 4> queue;
     ASSERT_TRUE(queue.try_push(1));
     ASSERT_TRUE(queue.try_push(2));
     ASSERT_TRUE(queue.try_push(3));
@@ -31,15 +31,15 @@ TEST(MPSC, test1) {
 }
 
 TEST(MPSC, test2) {
-    conq::MPSCQueue<int, 4> queue;
+    conq::MPSCBoundedQueue<int, 4> queue;
 
-    auto producer_fn = [](conq::MPSCQueue<int, 4> &queue) {
+    auto producer_fn = [](conq::MPSCBoundedQueue<int, 4> &queue) {
         for (int i = 0; i < 100; ++i) {
             while (!queue.try_push(i));
         }
     };
 
-    auto consumer_fn = [](conq::MPSCQueue<int, 4> &queue) {
+    auto consumer_fn = [](conq::MPSCBoundedQueue<int, 4> &queue) {
         for (int i = 0; i < 100; ++i) {
             while (true) {
                 auto val = queue.try_pop();
@@ -60,14 +60,14 @@ TEST(MPSC, test2) {
 }
 
 TEST(MPSC, test3) {
-    auto producer_fn = [](conq::MPSCQueue<int, 4> &queue, std::atomic<int> &counter) {
+    auto producer_fn = [](conq::MPSCBoundedQueue<int, 4> &queue, std::atomic<int> &counter) {
         for (int i = 0; i < 100; ++i) {
             auto val = counter.fetch_add(1, std::memory_order_acquire);
             while (!queue.try_push(val));
         }
     };
 
-    auto consumer_fn = [](conq::MPSCQueue<int, 4> &queue) {
+    auto consumer_fn = [](conq::MPSCBoundedQueue<int, 4> &queue) {
         std::vector<int> values;
         values.reserve(200);
         for (int i = 0; i < 200; ++i) {
@@ -87,7 +87,7 @@ TEST(MPSC, test3) {
         }
     };
 
-    conq::MPSCQueue<int, 4> queue;
+    conq::MPSCBoundedQueue<int, 4> queue;
     std::atomic<int> count = 0;
     std::thread producer1(producer_fn, std::ref(queue), std::ref(count));
     std::thread producer2(producer_fn, std::ref(queue), std::ref(count));

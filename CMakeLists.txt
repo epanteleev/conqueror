@@ -14,9 +14,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra -Wpedantic -Werror ")
 set(CONQ_LIB_SRC
     src/SPSCBoundedQueue.h
     src/SPSC.h
-    src/MPSC.h
+    src/MPSCBoundedQueue.h
+    src/RCU.h
     src/Definitions.h
-        src/MPMC.h
+    src/MPMC.h
 )
 
 add_library(libconq_libconq STATIC ${CONQ_LIB_SRC})
