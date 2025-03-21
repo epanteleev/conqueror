@@ -10,7 +10,7 @@ namespace conq {
     template<std::size_t LEN>
     requires PowerOfTwo<LEN>
     std::size_t ring_buffer_index(std::size_t index) {
-        return index & LEN - 1;
+        return index & (LEN - 1);
     }
 
     constexpr std::size_t CACHE_LINE_SIZE = 64;

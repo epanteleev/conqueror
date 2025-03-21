@@ -21,7 +21,7 @@ namespace conq {
             std::shared_ptr<T> old_data = m_data.load(std::memory_order_acquire);
             std::shared_ptr<T> new_data = std::make_shared<T>(*old_data);
             fn(new_data);
-            
+
             while (!m_data.compare_exchange_weak(old_data, new_data, std::memory_order_release, std::memory_order_acquire)) {
                 old_data = m_data.load(std::memory_order_acquire);
                 std::this_thread::yield();
