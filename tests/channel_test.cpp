@@ -6,55 +6,44 @@
 #include "Encoder.h"
 
 TEST(ShMem, test1) {
-    auto shmem = conq::ShMem::create("/test");
-    ASSERT_TRUE(shmem.has_value());
+    auto ptr = conq::ChannelWriter<4>::create("/test").value();
+    ptr.write("test", 4);
 
-    auto ptr = shmem.value()
-            .allocate<conq::Channel<4>>();
-
-    ASSERT_NE(ptr, nullptr);
-    ptr->write("test", 4);
-
-    auto shmem2 = conq::ShMem::open("/test");
-    ASSERT_TRUE(shmem2.has_value());
-
-    auto* ptr2 = shmem.value()
-            .open<conq::Channel<4>>();
-
+    auto ptr2 = conq::ChannelReader<4>::open("/test").value();
     std::string data;
     data.resize(4);
-    ptr2->read(data);
+    ptr2.read(data);
     ASSERT_EQ(data.size(), 4);
     ASSERT_EQ(data, "test");
 }
 
 TEST(SPSC, test2) {
-    auto shmem = conq::ShMem::create("/test");
+    auto channel = conq::ChannelWriter<4>::create("/test").value();
 
-    auto channel = shmem.value()
-            .allocate<conq::Channel<4>>();
-
-    auto producer_fn = [](conq::Channel<4>* channel) {
-        channel->write("Hello", 5);
-        channel->write(" World!", 7);
+    auto producer_fn = [](conq::ChannelWriter<4>& channel) {
+        channel.write("Hello", 5);
+        channel.write(" World!", 7);
+        int v = 90;
+        channel.write(reinterpret_cast<char*>(&v), sizeof(v));
     };
 
     auto consumer_fn = [](int a) {
-        auto shmem1 = conq::ShMem::open("/test");
-        auto channel1 = shmem1.value()
-                .open<conq::Channel<4>>();
+        auto reader = conq::ChannelReader<4>::open("/test").value();
 
         std::string data1;
         data1.resize(12);
-
-        const auto len = channel1->read(data1);
+        const auto len = reader.read(data1);
         ASSERT_EQ(std::strcmp(data1.c_str(), "Hello"), 0);
 
-        channel1->read(std::span{data1.begin() + static_cast<long>(len), 8});
+        reader.read(std::span{data1.begin() + static_cast<long>(len), 8});
         ASSERT_EQ(data1, "Hello World!");
+
+        int v;
+        reader.read(reinterpret_cast<char*>(&v), sizeof(v));
+        ASSERT_EQ(v, 90);
     };
 
-    std::thread producer(producer_fn, channel);
+    std::thread producer(producer_fn, std::ref(channel));
     std::thread consumer(consumer_fn, 0);
 
     consumer.join();
@@ -63,24 +52,23 @@ TEST(SPSC, test2) {
 
 
 TEST(Encoder, test1) {
-    conq::Encoder coder("test", 4);
+    conq::Encoder coder("test");
     auto encoded = coder.encode_bucket();
     ASSERT_TRUE(encoded.has_value());
     const auto value = encoded.value();
     conq::Decoder decoder(value);
 
-    std::string data;
-    data.resize(4);
+    char data[5];
     auto record = decoder.decode_bucket(data);
     ASSERT_TRUE(record.has_value());
 
-    ASSERT_EQ(record.value().get_length(), 4);
+    ASSERT_EQ(record.value().get_length(), 5);
     ASSERT_TRUE(record.value().is_last_record());
-    ASSERT_EQ(data, "test");
+    ASSERT_EQ(std::strcmp(data, "test"), 0);
 }
 
 TEST(Encoder, test2) {
-    conq::Encoder coder("Hello, World!", 13);
+    conq::Encoder coder(std::span{"Hello, World!", 13});
     auto encoded = coder.encode_bucket();
     ASSERT_TRUE(encoded.has_value());
     const auto value0 = encoded.value();
@@ -103,7 +91,6 @@ TEST(Encoder, test2) {
     ASSERT_TRUE(record2.has_value());
     ASSERT_EQ(record2.value().get_length(), 6);
     ASSERT_TRUE(record2.value().is_last_record());
-
 
     ASSERT_EQ(data, "Hello, World!");
 }

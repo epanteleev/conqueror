@@ -15,10 +15,26 @@ namespace conq {
                 m_path(std::move(path)) {}
 
         ~ShMem() {
-            shm_unlink(m_path.c_str());
+            if (m_fd == EMPTY_FD) {
+                return;
+            }
+
+            int err = shm_unlink(m_path.c_str());
+            if (err == -1 && errno == ENOENT) {
+                // Ignore if file does not exist
+                // We may have already unlinked the file in this process
+                errno = 0;
+                return;
+            }
+            assert_perror(err);
         }
 
         ShMem(const ShMem&) = delete;
+
+        ShMem(ShMem &&other) noexcept:
+            m_fd(std::exchange(other.m_fd, EMPTY_FD)),
+            m_path(std::move(other.m_path)) {}
+
         ShMem& operator=(const ShMem&) = delete;
 
     public:
@@ -48,8 +64,8 @@ namespace conq {
         }
 
     private:
-        static std::optional<ShMem> shm(const char* name, int flags, int mode) {
-            int fd = shm_open(name, flags, mode);
+        static std::optional<ShMem> shm(const std::filesystem::path& name, int flags, int mode) {
+            int fd = shm_open(name.c_str(), flags, mode);
             if (fd == -1) {
                 return std::nullopt;
             }
@@ -66,6 +82,7 @@ namespace conq {
             return mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, 0);
         }
 
+        static constexpr int EMPTY_FD = -1;
     private:
         int m_fd;
         std::filesystem::path m_path;

@@ -7,15 +7,15 @@
 namespace conq {
     class Encoder final {
     public:
-        Encoder(const char* data, std::size_t size) : m_data(data), m_size(size) {}
+        explicit Encoder(std::span<const char> data) : m_data(data) {}
 
         std::optional<std::size_t> encode_bucket() {
             std::size_t encoded{};
-            if (m_cursor + 1 >= m_size) {
+            if (m_cursor + 1 >= m_data.size()) {
                 return std::nullopt;
             }
 
-            const auto remaining = m_size - m_cursor;
+            const auto remaining = m_data.size() - m_cursor;
             switch (remaining) {
                 case 1:
                     encoded = at(m_cursor) << 8 | 0x01;
@@ -88,8 +88,7 @@ namespace conq {
         }
 
     private:
-        const char* m_data;
-        std::size_t m_size;
+        std::span<const char> m_data;
         std::size_t m_cursor{};
     };
 
@@ -119,7 +118,7 @@ namespace conq {
 
         [[nodiscard]]
         std::optional<Record> decode_bucket(std::span<char> buffer) const {
-            auto length = get_length();
+            const auto length = get_length();
             if (length > buffer.size()) {
                 return std::nullopt;
             }
