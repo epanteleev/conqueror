@@ -18,9 +18,9 @@ set(CONQ_LIB_SRC
     src/RCU.h
     src/Definitions.h
     src/MPMC.h
-    src/ShMem.h
-    src/Channel.h
-        src/Encoder.h
+        src/channel/ShMem.h
+        src/channel/Channel.h
+        src/channel/Encoder.h
 )
 
 add_library(libconq_libconq STATIC ${CONQ_LIB_SRC})

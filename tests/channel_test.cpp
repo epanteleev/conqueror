@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "ShMem.h"
-#include "Channel.h"
-#include "Encoder.h"
+#include "channel/ShMem.h"
+#include "channel/Channel.h"
+#include "channel/Encoder.h"
 
 TEST(ShMem, test1) {
     auto ptr = conq::ChannelWriter<4>::create("/test").value();
@@ -17,7 +17,7 @@ TEST(ShMem, test1) {
     ASSERT_EQ(data, "test");
 }
 
-TEST(SPSC, test2) {
+TEST(Channel, test1) {
     auto channel = conq::ChannelWriter<4>::create("/test").value();
 
     auto producer_fn = [](conq::ChannelWriter<4>& channel) {
@@ -50,6 +50,33 @@ TEST(SPSC, test2) {
     producer.join();
 }
 
+TEST(Channel, test2) {
+    auto channel = conq::ChannelWriter<4>::create("/test").value();
+
+    auto producer_fn = [](conq::ChannelWriter<4>& channel) {
+        channel.write("Hello World!", 12);
+    };
+
+    auto consumer_fn = [](int a) {
+        auto reader = conq::ChannelReader<4>::open("/test").value();
+
+        std::string data1;
+        data1.resize(2);
+        reader.read(data1);
+        ASSERT_EQ(std::strlen(data1.c_str()), 0);
+
+        std::string data2;
+        data2.resize(12);
+        reader.read(data2);
+        ASSERT_EQ(data2, "Hello World!");
+    };
+
+    std::thread producer(producer_fn, std::ref(channel));
+    std::thread consumer(consumer_fn, 0);
+
+    consumer.join();
+    producer.join();
+}
 
 TEST(Encoder, test1) {
     conq::Encoder coder("test");

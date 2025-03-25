@@ -5,6 +5,15 @@
 #include <span>
 
 namespace conq {
+    static constexpr std::size_t ONE_BYTE = 0x1;
+    static constexpr std::size_t TWO_BYTES = 0x2;
+    static constexpr std::size_t THREE_BYTES = 0x3;
+    static constexpr std::size_t FOUR_BYTES = 0x4;
+    static constexpr std::size_t FIVE_BYTES = 0x5;
+    static constexpr std::size_t SIX_BYTES = 0x6;
+    static constexpr std::size_t SEVEN_BYTES = 0x7;
+    static constexpr std::size_t MANY_BYTES = 0x9;
+
     class Encoder final {
     public:
         explicit Encoder(std::span<const char> data) : m_data(data) {}
@@ -17,53 +26,53 @@ namespace conq {
 
             const auto remaining = m_data.size() - m_cursor;
             switch (remaining) {
-                case 1:
-                    encoded = at(m_cursor) << 8 | 0x01;
+                case ONE_BYTE:
+                    encoded = at(m_cursor) << 8 | ONE_BYTE;
                     m_cursor += 1;
                     break;
-                case 2:
+                case TWO_BYTES:
                     encoded = at(m_cursor) << 16 |
-                            at(m_cursor + 1) << 8 | 0x02;
+                            at(m_cursor + 1) << 8 | TWO_BYTES;
                     m_cursor += 2;
                     break;
-                case 3:
+                case THREE_BYTES:
                     encoded = (at(m_cursor) << 24) |
                             (at(m_cursor + 1) << 16) |
-                            (at(m_cursor + 2) << 8) | 0x03;
+                            (at(m_cursor + 2) << 8) | THREE_BYTES;
                     m_cursor += 3;
                     break;
-                case 4:
+                case FOUR_BYTES:
                     encoded = (at(m_cursor) << 32) |
                             (at(m_cursor + 1) << 24) |
                             (at(m_cursor + 2) << 16) |
-                            (at(m_cursor + 3) << 8) | 0x04;
+                            (at(m_cursor + 3) << 8) | FOUR_BYTES;
                     m_cursor += 4;
                     break;
-                case 5:
+                case FIVE_BYTES:
                     encoded = (at(m_cursor) << 40) |
                             (at(m_cursor + 1) << 32) |
                             (at(m_cursor + 2) << 24) |
                             (at(m_cursor + 3) << 16) |
-                            (at(m_cursor + 4) << 8) | 0x05;
+                            (at(m_cursor + 4) << 8) | FIVE_BYTES;
                     m_cursor += 5;
                     break;
-                case 6:
+                case SIX_BYTES:
                     encoded = (at(m_cursor) << 48) |
                             (at(m_cursor + 1) << 40) |
                             (at(m_cursor + 2) << 32) |
                             (at(m_cursor + 3) << 24) |
                             (at(m_cursor + 4) << 16) |
-                            (at(m_cursor + 5) << 8) | 0x06;
+                            (at(m_cursor + 5) << 8) | SIX_BYTES;
                     m_cursor += 6;
                     break;
-                case 7:
+                case SEVEN_BYTES:
                     encoded = (at(m_cursor) << 56) |
                             (at(m_cursor + 1) << 48) |
                             (at(m_cursor + 2) << 40) |
                             (at(m_cursor + 3) << 32) |
                             (at(m_cursor + 4) << 24) |
                             (at(m_cursor + 5) << 16) |
-                            (at(m_cursor + 6) << 8) | 0x07;
+                            (at(m_cursor + 6) << 8) | SEVEN_BYTES;
                     m_cursor += 7;
                     break;
                 default:
@@ -73,7 +82,7 @@ namespace conq {
                             (at(m_cursor + 3) << 32) |
                             (at(m_cursor + 4) << 24) |
                             (at(m_cursor + 5) << 16) |
-                            (at(m_cursor + 6) << 8) | 0x09;
+                            (at(m_cursor + 6) << 8) | MANY_BYTES;
                     m_cursor += 7;
                     break;
             }
@@ -94,7 +103,7 @@ namespace conq {
 
     class Record {
     public:
-        Record(std::size_t length, bool is_last) : length(length), is_last(is_last) {}
+        Record(char length, bool is_last) : length(length), is_last(is_last) {}
 
         [[nodiscard]]
         std::size_t get_length() const {
@@ -107,7 +116,7 @@ namespace conq {
         }
 
     private:
-        std::size_t length{};
+        char length{};
         bool is_last{};
     };
 
@@ -125,32 +134,32 @@ namespace conq {
 
             bool is_last = true;
             switch (m_bucket & 0xFF) {
-                case 1:
+                case ONE_BYTE:
                     buffer[0] = at(1);
                     break;
-                case 2:
+                case TWO_BYTES:
                     buffer[0] = at(2);
                     buffer[1] = at(1);
                     break;
-                case 3:
+                case THREE_BYTES:
                     buffer[0] = at(3);
                     buffer[1] = at(2);
                     buffer[2] = at(1);
                     break;
-                case 4:
+                case FOUR_BYTES:
                     buffer[0] = at(4);
                     buffer[1] = at(3);
                     buffer[2] = at(2);
                     buffer[3] = at(1);
                     break;
-                case 5:
+                case FIVE_BYTES:
                     buffer[0] = at(5);
                     buffer[1] = at(4);
                     buffer[2] = at(3);
                     buffer[3] = at(2);
                     buffer[4] = at(1);
                     break;
-                case 6:
+                case SIX_BYTES:
                     buffer[0] = at(6);
                     buffer[1] = at(5);
                     buffer[2] = at(4);
@@ -158,7 +167,7 @@ namespace conq {
                     buffer[4] = at(2);
                     buffer[5] = at(1);
                     break;
-                case 7:
+                case SEVEN_BYTES:
                     buffer[0] = at(7);
                     buffer[1] = at(6);
                     buffer[2] = at(5);
@@ -167,7 +176,7 @@ namespace conq {
                     buffer[5] = at(2);
                     buffer[6] = at(1);
                     break;
-                default:
+                case MANY_BYTES:
                     buffer[0] = at(7);
                     buffer[1] = at(6);
                     buffer[2] = at(5);
@@ -177,6 +186,8 @@ namespace conq {
                     buffer[6] = at(1);
                     is_last = false;
                     break;
+                default:
+                    std::unreachable();
             }
 
             return Record{length, is_last};
@@ -189,12 +200,12 @@ namespace conq {
         }
 
         [[nodiscard]]
-        std::size_t get_length() const {
+        char get_length() const {
             const auto v = m_bucket & 0xFF;
-            if (v == 0x09) {
-                return 7;
+            if (v == MANY_BYTES) {
+                return SEVEN_BYTES;
             } else {
-                return v;
+                return static_cast<char>(v);
             }
         }
 

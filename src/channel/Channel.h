@@ -24,15 +24,15 @@ namespace conq {
             }
 
             std::size_t write(std::span<const char> data) {
-                std::size_t written = 0;
+                std::size_t written{};
                 Encoder coder(data);
                 while (true) {
-                    auto encoded = coder.encode_bucket();
+                    const auto encoded = coder.encode_bucket();
                     if (!encoded.has_value()) {
                         return written;
                     }
 
-                    auto val = encoded.value();
+                    const auto val = encoded.value();
                     if (!m_queue.try_push(val)) {
                         return written;
                     }
@@ -41,30 +41,8 @@ namespace conq {
                 }
             }
 
-            std::size_t read(std::span<char> data) {
-                std::size_t read = 0;
-                while (read < data.size()) {
-                    auto val = m_queue.try_pop();
-                    if (!val.has_value()) {
-                        return read;
-                    }
-                    const auto decoded_opt = Decoder(val.value())
-                            .decode_bucket(data.subspan(read));
-                    if (!decoded_opt.has_value()) { // BUG: can lose data if there is no space in the buffer
-                        return read;
-                    }
-
-                    const auto decoded = decoded_opt.value();
-                    read += decoded.get_length();
-                    if (decoded.is_last_record()) {
-                        return read;
-                    }
-                }
-
-                return read;
-            }
-
         private:
+            [[maybe_unused]] std::size_t m_cached{};
             SPSCBoundedQueue<std::size_t, N> m_queue;
         };
 
@@ -81,13 +59,13 @@ namespace conq {
 
         public:
             std::size_t read(std::span<char> data) {
-                std::size_t read = 0;
+                std::size_t read{};
                 while (read < data.size()) {
-                    auto val = m_queue.try_pop();
-                    if (!val.has_value()) {
+                    if (acquire_value()) {
                         return read;
                     }
-                    const auto decoded_opt = Decoder(val.value())
+
+                    const auto decoded_opt = Decoder(m_cached)
                             .decode_bucket(data.subspan(read));
                     if (!decoded_opt.has_value()) {
                         return read;
@@ -95,6 +73,7 @@ namespace conq {
 
                     const auto decoded = decoded_opt.value();
                     read += decoded.get_length();
+                    m_cached = EMPTY;
                     if (decoded.is_last_record()) {
                         return read;
                     }
@@ -108,8 +87,26 @@ namespace conq {
             }
 
         private:
+            bool acquire_value() {
+                if (m_cached != EMPTY) {
+                    return false;
+                }
+
+                const auto val = m_queue.try_pop();
+                if (!val.has_value()) {
+                    return true;
+                }
+                m_cached = val.value();
+                return false;
+            }
+
+            static constexpr std::size_t EMPTY = 0;
+        private:
+            std::size_t m_cached{};
             SPSCBoundedQueue<std::size_t, N> m_queue;
         };
+
+        static_assert(sizeof(Writer<4>) == sizeof(Reader<4>), "Writer and Reader must have the same size");
     }
 
 
@@ -117,7 +114,7 @@ namespace conq {
     requires PowerOfTwo<N>
     class ChannelWriter final {
     public:
-        explicit ChannelWriter(Writer<N> *w, ShMem shmem) :
+        explicit ChannelWriter(Writer<N> *w, ShMem&& shmem) :
                 m_writer(w),
                 m_shmem(std::move(shmem)) {}
 
@@ -159,7 +156,7 @@ namespace conq {
     requires PowerOfTwo<N>
     class ChannelReader final {
     public:
-        explicit ChannelReader(Reader<N> *r, ShMem shmem) :
+        explicit ChannelReader(Reader<N> *r, ShMem&& shmem) :
                 m_reader(r),
                 m_shmem(std::move(shmem)) {}
 
