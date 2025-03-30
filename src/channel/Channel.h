@@ -109,19 +109,18 @@ namespace conq {
         static_assert(sizeof(Writer<4>) == sizeof(Reader<4>), "Writer and Reader must have the same size");
     }
 
-
     template<std::size_t N>
     requires PowerOfTwo<N>
     class ChannelWriter final {
     public:
-        explicit ChannelWriter(Writer<N> *w, ShMem&& shmem) :
+        explicit ChannelWriter(Writer<N> *w, ShMem &&shmem) :
                 m_writer(w),
                 m_shmem(std::move(shmem)) {}
 
         ChannelWriter(const ChannelWriter &) = delete;
         ChannelWriter &operator=(const ChannelWriter &) = delete;
 
-        ChannelWriter(ChannelWriter && other) noexcept:
+        ChannelWriter(ChannelWriter &&other) noexcept:
                 m_writer(std::exchange(other.m_writer, nullptr)),
                 m_shmem(std::move(other.m_shmem)) {}
 
@@ -163,7 +162,7 @@ namespace conq {
         ChannelReader(const ChannelReader &) = delete;
         ChannelReader &operator=(const ChannelReader &) = delete;
 
-        ChannelReader(ChannelReader && other) noexcept:
+        ChannelReader(ChannelReader &&other) noexcept:
                 m_reader(std::exchange(other.m_reader, nullptr)),
                 m_shmem(std::move(other.m_shmem)) {}
 

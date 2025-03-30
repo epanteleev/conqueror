@@ -12,15 +12,18 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -fsanitize=thread")
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra -Wpedantic -Werror ")
 
 set(CONQ_LIB_SRC
-    src/SPSCBoundedQueue.h
-    src/SPSC.h
-    src/MPSCBoundedQueue.h
-    src/RCU.h
-    src/Definitions.h
-    src/MPMC.h
-        src/channel/ShMem.h
+        src/SPSCBoundedQueue.h
+        src/SPSC.h
+        src/MPSCBoundedQueue.h
+        src/RCU.h
+        src/Definitions.h
+        src/MPMC.h
+        src/os/ShMem.h
         src/channel/Channel.h
         src/channel/Encoder.h
+        src/os/Process.h
+        src/os/LinuxError.h
+        src/os/Semaphore.h
 )
 
 add_library(libconq_libconq STATIC ${CONQ_LIB_SRC})

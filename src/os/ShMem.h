@@ -6,6 +6,10 @@
 
 #include <filesystem>
 #include <expected>
+#include <cassert>
+#include <utility>
+
+#include "os/LinuxError.h"
 
 namespace conq {
     class ShMem final {
@@ -38,11 +42,11 @@ namespace conq {
         ShMem& operator=(const ShMem&) = delete;
 
     public:
-        static std::optional<ShMem> open(const std::filesystem::path& path) {
+        static std::expected<ShMem, LinuxError> open(const std::filesystem::path& path) {
             return shm(path.c_str(), O_RDWR, 0);
         }
 
-        static std::optional<ShMem> create(const std::filesystem::path& path) {
+        static std::expected<ShMem, LinuxError> create(const std::filesystem::path& path) {
             return shm(path.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
         }
 
@@ -64,13 +68,13 @@ namespace conq {
         }
 
     private:
-        static std::optional<ShMem> shm(const std::filesystem::path& name, int flags, int mode) {
-            int fd = shm_open(name.c_str(), flags, mode);
+        static std::expected<ShMem, LinuxError> shm(const std::filesystem::path& name, int flags, int mode) {
+            const int fd = shm_open(name.c_str(), flags, mode);
             if (fd == -1) {
-                return std::nullopt;
+                return LinuxError::unexpect(errno);
             }
 
-            return std::make_optional<ShMem>(name, fd);
+            return ShMem(name, fd);
         }
 
         [[nodiscard]]

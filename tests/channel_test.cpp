@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "channel/ShMem.h"
+#include "os/ShMem.h"
 #include "channel/Channel.h"
 #include "channel/Encoder.h"
+#include "os/Process.h"
+#include "os/Semaphore.h"
 
 TEST(ShMem, test1) {
     auto ptr = conq::ChannelWriter<4>::create("/test").value();
@@ -76,6 +78,64 @@ TEST(Channel, test2) {
 
     consumer.join();
     producer.join();
+}
+
+TEST(Channel, test3) {
+    auto producer = []() {
+        auto sem = conq::Semaphore::create("/sem").value();
+        auto err = sem.post();
+        if (err.has_value()) {
+            return 1;
+        }
+
+        auto ptr = conq::ChannelWriter<4>::create("/test").value();
+        ptr.write("test", 4);
+
+        auto sem1 = conq::Semaphore::create("/sem1").value();
+        auto err1 = sem1.wait();
+        if (err1.has_value()) {
+            return 1;
+        }
+
+        return 0;
+    };
+
+    auto consumer = []() {
+        auto sem = conq::Semaphore::create("/sem").value();
+        auto err = sem.wait();
+        if (err.has_value()) {
+            return 1;
+        }
+
+        auto ptr2 = conq::ChannelReader<4>::open("/test").value();
+        std::string data;
+        data.resize(4);
+        ptr2.read(data);
+
+        auto sem1 = conq::Semaphore::create("/sem1").value();
+        auto err1 = sem1.post();
+        if (err1.has_value()) {
+            return 1;
+        }
+
+        if (data != "test") {
+            return 1;
+        }
+
+        return 0;
+    };
+
+    auto process_opt = conq::Process::fork(std::move(producer));
+    auto process = process_opt.value();
+
+    auto process2_opt = conq::Process::fork(std::move(consumer));
+    auto process2 = process2_opt.value();
+
+    const auto status = process.wait();
+    ASSERT_EQ(status.value(), 0);
+
+    const auto status2 = process2.wait();
+    ASSERT_EQ(status2.value(), 0);
 }
 
 TEST(Encoder, test1) {
