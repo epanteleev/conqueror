@@ -7,6 +7,7 @@ TEST(RCU, test1) {
     auto ptr = rcu.copy_and_update([](int& data) {
         data = 42;
     });
+
     ASSERT_TRUE(ptr != nullptr);
     EXPECT_EQ(*ptr, 0);
 

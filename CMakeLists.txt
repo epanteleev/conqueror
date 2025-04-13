@@ -25,6 +25,7 @@ set(CONQ_LIB_SRC
         src/os/LinuxError.h
         src/os/Semaphore.h
         src/LockFreeStack.h
+        src/os/perf/Perf.h
 )
 
 add_library(libconq_libconq STATIC ${CONQ_LIB_SRC})
