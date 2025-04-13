@@ -57,7 +57,6 @@ TEST(SPSCBoundedQ, test2) {
 
     consumer.join();
     producer.join();
-
 }
 
 TEST(SPSC, test1) {
