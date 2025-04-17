@@ -8,8 +8,9 @@ project(conqueror
 
 set(CMAKE_CXX_STANDARD 26)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -fsanitize=thread")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra -Wpedantic -Werror ")
+
 
 set(CONQ_LIB_SRC
         src/SPSCBoundedQueue.h
@@ -26,6 +27,7 @@ set(CONQ_LIB_SRC
         src/os/Semaphore.h
         src/LockFreeStack.h
         src/os/perf/Perf.h
+        src/allocation/SeqAllocator.h
 )
 
 add_library(libconq_libconq STATIC ${CONQ_LIB_SRC})
