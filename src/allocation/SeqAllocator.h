@@ -6,10 +6,31 @@
 
 namespace conq::memory {
     template<typename T>
+    struct Bucket final {
+        explicit Bucket(T* ptr)
+                : count(1), free(false), data(ptr) {}
+
+        unsigned count;
+        bool free;
+        T* data;
+    };
+
+    template<typename T>
+    struct Slot final {
+        template<typename... Args>
+        explicit Slot(Args&&... args): data(std::forward<Args>(args)...) {}
+
+        T data;
+        Bucket<Slot<T>>* indirection_ptr{};
+    };
+
+    template<typename T>
     class Rc final {
     public:
         Rc() = default;
-        explicit Rc(T* ptr) noexcept: m_bucket(new Bucket(ptr)) {}
+        explicit Rc(Slot<T>* ptr) noexcept: m_bucket(new Bucket(ptr)) {
+            m_bucket->data->indirection_ptr = m_bucket;
+        }
 
         Rc(const Rc& other) {
             decrease();
@@ -28,7 +49,11 @@ namespace conq::memory {
             return *this;
         }
 
-        Rc(Rc&& other) noexcept: m_bucket(std::exchange(other.m_bucket, nullptr)) {}
+        Rc(Rc&& other) noexcept {
+            decrease();
+            m_bucket = std::exchange(other.m_bucket, nullptr);
+        }
+
         Rc& operator=(Rc&& other) noexcept {
             if (this == &other) {
                 return *this;
@@ -49,7 +74,7 @@ namespace conq::memory {
                 throw std::runtime_error("Dereferencing null pointer");
             }
 
-            return *m_bucket->data;
+            return m_bucket->data->data;
         }
 
         [[nodiscard]]
@@ -61,7 +86,7 @@ namespace conq::memory {
             return value();
         }
 
-        T* raw_ptr() noexcept {
+        Slot<T>* raw_ptr() noexcept {
             return m_bucket->data;
         }
 
@@ -72,24 +97,18 @@ namespace conq::memory {
             }
             --m_bucket->count;
             if (m_bucket->count == 0) {
+                if (!m_bucket->free) {
+                    m_bucket->data->indirection_ptr = nullptr;
+                }
+
                 delete m_bucket;
                 m_bucket = nullptr;
             }
         }
 
-
-        struct Bucket final {
-            explicit Bucket(T* ptr)
-                : count(1), free(false), data(ptr) {}
-
-            unsigned count;
-            bool free;
-            T* data;
-        };
-
    // private:
     public:
-        Bucket* m_bucket{};
+        Bucket<Slot<T>>* m_bucket{};
     };
 
 
@@ -128,21 +147,11 @@ namespace conq::memory {
         }
 
         void deallocate(T* ptr) noexcept {
-            if (ptr == nullptr) {
+            if (!is_dirty(ptr)) {
                 return;
             }
 
-            if (!is_in_range(ptr)) {
-                return;
-            }
-
-            if (is_free(ptr)) {
-                return;
-            }
-
-            ptr->~T();
-            m_free[m_index] = ptr;
-            ++m_index;
+            unchecked_deallocate(ptr);
         }
 
         [[nodiscard]]
@@ -166,7 +175,7 @@ namespace conq::memory {
             return p >= begin() && p < end();
         }
 
-        void clear() noexcept {
+        void clear(std::function<void(T*)>&& on_clean) noexcept {
             if (m_index == N) {
                 return;
             }
@@ -176,11 +185,33 @@ namespace conq::memory {
                     continue;
                 }
 
+                on_clean(bucket);
                 deallocate(bucket);
             }
         }
 
-    //private:
+        void clear() noexcept {
+            clear([](T* ptr) {});
+        }
+
+    private:
+        [[nodiscard]]
+        bool is_dirty(T* ptr) const noexcept {
+            if (ptr == nullptr) {
+                return false;
+            }
+
+            if (!is_in_range(ptr)) {
+                return false;
+            }
+
+            if (is_free(ptr)) {
+                return false;
+            }
+
+            return true;
+        }
+
         bool is_free(const T* ptr) const noexcept {
             return std::find(m_free.begin(), m_free.begin()+m_index, ptr) != m_free.begin()+m_index;
         }
@@ -194,6 +225,12 @@ namespace conq::memory {
         [[nodiscard]]
         const char* end() const noexcept {
             return begin() + N * sizeof(T);
+        }
+
+        void unchecked_deallocate(T* ptr) noexcept {
+            ptr->~T();
+            m_free[m_index] = ptr;
+            ++m_index;
         }
 
         char m_pool[sizeof(T) * N]{};
@@ -210,7 +247,7 @@ namespace conq::memory {
             auto entry = m_head;
             while (entry != nullptr) {
                 auto next = entry->next;
-                entry->allocator.clear();
+                entry->allocator.clear(finalize);
                 delete entry;
                 entry = next;
             }
@@ -233,7 +270,7 @@ namespace conq::memory {
             return Rc<T>(p);
         }
 
-        void deallocate(Rc<T> ptr) noexcept {
+        void deallocate(Rc<T>& ptr) noexcept {
             auto entry = m_head;
             Entry* prev = nullptr;
             while (entry != nullptr) {
@@ -255,12 +292,11 @@ namespace conq::memory {
 
     private:
         struct Entry {
-            SeqAllocator<T, OBJECTS_PER_ENTRY> allocator;
+            SeqAllocator<Slot<T>, OBJECTS_PER_ENTRY> allocator;
             Entry* next{};
         };
 
-
-        void remove_entry(Entry* prev, Entry* current) {
+        void remove_entry(Entry* prev, Entry* current) noexcept {
             if (prev != nullptr) {
                 prev->next = current->next;
             } else {
@@ -268,6 +304,15 @@ namespace conq::memory {
             }
             delete current;
         }
+
+        static void finalize(Slot<T>* ptr) noexcept {
+            if (ptr->indirection_ptr == nullptr) {
+                return;
+            }
+
+            ptr->indirection_ptr->free = true;
+            ptr->indirection_ptr = nullptr;
+        };
 
     private:
         Entry* m_head{};

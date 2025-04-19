@@ -42,7 +42,7 @@ TEST(ObjPool, test1) {
         ASSERT_EQ(ptr2.has_value(), false);
     }
 
-    //ASSERT_EQ(p.has_value(), false);
+    ASSERT_EQ(p.has_value(), false);
 }
 
 int main(int argc, char **argv) {
