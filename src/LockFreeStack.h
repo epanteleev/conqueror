@@ -12,7 +12,6 @@ namespace conq {
     public:
         LockFreeStack() = default;
 
-    public:
         template<typename U>
         requires std::convertible_to<U, T>
         void push(U&& value) {

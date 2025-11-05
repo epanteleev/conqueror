@@ -6,7 +6,7 @@ project(conqueror
         LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra -Wpedantic -Werror ")
@@ -16,7 +16,6 @@ set(CONQ_LIB_SRC
         src/SPSCBoundedQueue.h
         src/SPSC.h
         src/MPSCBoundedQueue.h
-        src/RCU.h
         src/Definitions.h
         src/MPMC.h
         src/os/ShMem.h
@@ -55,4 +54,5 @@ target_compile_features(libconq_libconq PUBLIC cxx_std_23)
 add_executable(conqueror main.cpp)
 target_link_libraries(conqueror PUBLIC libconq::libconq)
 
+enable_testing()
 add_subdirectory(tests)

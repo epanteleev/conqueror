@@ -3,7 +3,7 @@
 #include "SPSCBoundedQueue.h"
 
 int main() {
-    conq::SPSCBoundedQueue<int, 16> queue;
+    conq::SPSCMailBox<int, 16> queue;
     queue.try_push(1);
     queue.try_push(2);
 

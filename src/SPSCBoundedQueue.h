@@ -10,9 +10,9 @@
 namespace conq {
     template<QElement T, std::size_t LEN>
     requires PowerOfTwo<LEN>
-    class SPSCBoundedQueue final {
+    class SPSCMailBox final {
     public:
-        SPSCBoundedQueue() = default;
+        SPSCMailBox() = default;
 
         template<typename U>
         requires std::convertible_to<U, T>

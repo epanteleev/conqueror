@@ -4,7 +4,7 @@
 #include "SPSC.h"
 
 TEST(SPSCBoundedQ, test1) {
-    conq::SPSCBoundedQueue<int, 4> queue;
+    conq::SPSCMailBox<int, 4> queue;
     ASSERT_TRUE(queue.try_push(1));
     ASSERT_TRUE(queue.try_push(2));
     ASSERT_TRUE(queue.try_push(3));
@@ -32,15 +32,15 @@ TEST(SPSCBoundedQ, test1) {
 }
 
 TEST(SPSCBoundedQ, test2) {
-    conq::SPSCBoundedQueue<int, 4> queue;
+    conq::SPSCMailBox<int, 4> queue;
 
-    auto producer_fn = [](conq::SPSCBoundedQueue<int, 4> &queue) {
+    auto producer_fn = [](conq::SPSCMailBox<int, 4> &queue) {
         for (int i = 0; i < 100; ++i) {
             while (!queue.try_push(i));
         }
     };
 
-    auto consumer_fn = [](conq::SPSCBoundedQueue<int, 4> &queue) {
+    auto consumer_fn = [](conq::SPSCMailBox<int, 4> &queue) {
         for (int i = 0; i < 100; ++i) {
             while (true) {
                 auto val = queue.try_pop();

@@ -21,7 +21,7 @@ namespace conq::memory {
         explicit Slot(Args&&... args): data(std::forward<Args>(args)...) {}
 
         T data;
-        Bucket<Slot<T>>* indirection_ptr{};
+        Bucket<Slot>* indirection_ptr{};
     };
 
     template<typename T>
@@ -68,7 +68,6 @@ namespace conq::memory {
             decrease();
         }
 
-    public:
         T& value() {
             if (!has_value()) {
                 throw std::runtime_error("Dereferencing null pointer");
@@ -314,7 +313,6 @@ namespace conq::memory {
             ptr->indirection_ptr = nullptr;
         };
 
-    private:
         Entry* m_head{};
     };
 }

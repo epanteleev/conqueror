@@ -24,8 +24,7 @@ namespace conq {
                 return std::nullopt;
             }
 
-            const auto remaining = m_data.size() - m_cursor;
-            switch (remaining) {
+            switch (m_data.size() - m_cursor) {
                 case ONE_BYTE:
                     encoded = at(m_cursor) << 8 | ONE_BYTE;
                     m_cursor += 1;
@@ -92,11 +91,10 @@ namespace conq {
 
     private:
         [[nodiscard]]
-        std::size_t at(std::size_t index) const {
+        std::size_t at(const std::size_t index) const {
             return static_cast<std::size_t>(m_data[index]);
         }
 
-    private:
         std::span<const char> m_data;
         std::size_t m_cursor{};
     };
@@ -204,12 +202,10 @@ namespace conq {
             const auto v = m_bucket & 0xFF;
             if (v == MANY_BYTES) {
                 return SEVEN_BYTES;
-            } else {
-                return static_cast<char>(v);
             }
+            return static_cast<char>(v);
         }
 
-    private:
         std::size_t m_bucket{};
     };
 }
